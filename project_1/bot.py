@@ -3,7 +3,7 @@ import asyncio
 import itertools
 from discord.ext import commands
 
-TOKEN = "MTQ1MTEyOTE3NjMwNzUzNTk0NQ.GKyZ0S.lyqLgEZJ-ZSpnQizBK6spo0873dfY5wLZk6gdI"
+TOKEN = ""
 
 intents = discord.Intents.default()
 intents.members = True
@@ -52,4 +52,5 @@ async def setup():
 
 import asyncio
 asyncio.run(setup())
+
 bot.run(TOKEN)
