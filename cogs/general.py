@@ -2,6 +2,38 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+HELP_SECTIONS = [
+    (
+        "📋 點名",
+        "**`/點名 語音頻道 身分組`**\n"
+        "檢查該身分組成員是否都在語音頻道內，顯示已到 / 未到 / 應到人數，"
+        "並提及未到成員（不計入 Bot），結果自動存入資料庫。",
+    ),
+    (
+        "🗂️ 點名紀錄",
+        "**`/點名紀錄`** 最近 10 筆紀錄，含未到成員名字\n"
+        "**`/點名紀錄 日期:2026/10/24`** 指定日期的紀錄（也可輸入 `10/24`）\n"
+        "**`/點名紀錄 身分組:@身分組`** 只看該身分組，可與日期合用\n"
+        "**`/點名紀錄 編號:12`** 該次點名的完整已到 / 未到名單",
+    ),
+    (
+        "🎮 身分組",
+        "**`/menu-role`**（限管理員）\n"
+        "在此頻道發送遊戲身分組選單：下拉選單點一下領取、再點一下移除，"
+        "🧹 按鈕一次移除所有遊戲身分組。",
+    ),
+    (
+        "⚙️ 通用",
+        "**`/ping`** 查看機器人延遲\n"
+        "**`/help`** 顯示這份說明",
+    ),
+    (
+        "🤖 自動功能",
+        "👋 新成員加入時發送歡迎訊息（本人可按 🗑️ 刪除）\n"
+        "🔄 每 30 秒輪換機器人狀態",
+    ),
+]
+
 
 class General(commands.Cog):
     """通用指令。"""
@@ -15,12 +47,21 @@ class General(commands.Cog):
             f"🏓 Pong！延遲 `{round(self.bot.latency * 1000)} ms`", ephemeral=True
         )
 
-    @app_commands.command(name="help", description="列出所有指令")
-    async def help(self, interaction: discord.Interaction):
-        embed = discord.Embed(title="📖 指令列表", color=0xCC0000)
-        for cmd in self.bot.tree.get_commands():
-            embed.add_field(name=f"/{cmd.name}", value=cmd.description or "—", inline=False)
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+    @app_commands.command(name="help", description="列出所有指令與功能說明")
+    @app_commands.rename(public="公開")
+    @app_commands.describe(public="是否讓頻道內所有人都看得到（預設只有自己看得到）")
+    async def help(self, interaction: discord.Interaction, public: bool = False):
+        embed = discord.Embed(
+            title="📖 指令說明",
+            description="輸入 `/` 即可看到所有指令，選擇後依提示填入參數。",
+            color=0xCC0000,
+        )
+        for name, value in HELP_SECTIONS:
+            embed.add_field(name=name, value=value, inline=False)
+        if self.bot.user:
+            embed.set_thumbnail(url=self.bot.user.display_avatar.url)
+        embed.set_footer(text="☭ 全世界無產者，聯合起來！ ☭")
+        await interaction.response.send_message(embed=embed, ephemeral=not public)
 
 
 async def setup(bot: commands.Bot):
