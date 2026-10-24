@@ -1,11 +1,11 @@
-import discord
 import random
+
+import discord
+from discord import app_commands
 from discord.ext import commands
 
-CHANNEL_ID = 1160626478363443424  # 指定頻道
-
 # ======================
-# 自訂選項（名稱 + 身分組ID）
+# 自訂選項（名稱 + 身分組ID + 表情）
 # ======================
 ROLE_OPTIONS = [
     ("Minecraft", 1121616771925938236, "<:Minecraft:1121616616099156018>"),
@@ -13,11 +13,10 @@ ROLE_OPTIONS = [
     ("Overwatch", 1057244921330941972, "<:Overwatch:1027860652880044052>"),
     ("Valorant", 1075340988366737419, "<:Valorant:1075341351211765770>"),
     ("League of Legends", 1125382270254067833, "<:LeagueofLegends:1125382589402861680>"),
-    ("CSGO", 1451245428573081702,"♥️"),
+    ("CSGO", 1451245428573081702, "♥️"),
 ]
 
-
-IMAGE_POOL = [           #/menu-role 隨機圖片
+IMAGE_POOL = [  # /menu-role 隨機圖片
     "https://i.meee.com.tw/BYigMCq.png",
     "https://i.meee.com.tw/0IsCCnA.png",
     "https://i.meee.com.tw/Fm1SQIk.png",
@@ -27,37 +26,14 @@ ALLOWED_ROLE_IDS = [
     1072779660347318322,  # 只有該身分組可以使用指令
 ]
 
-intents = discord.Intents.default()
-intents.members = True
-intents.message_content = True  
 
-bot = commands.Bot(command_prefix="/", intents=intents)
-
-class MenuRole(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
-        bot.add_view(RoleSelectView())  # Persistent View
-
-    @commands.command(name="menu-role")
-    @commands.has_any_role(1072779660347318322)
-    async def menu_role(self, ctx):
-        await send_role_menu(ctx.channel)
-        await ctx.message.delete()
-
-async def setup(bot):
-    await bot.add_cog(MenuRole(bot))
-    
 # ======================
 # Select Menu
 # ======================
 class RoleSelect(discord.ui.Select):
     def __init__(self):
         options = [
-            discord.SelectOption(
-                label=name,
-                value=str(role_id),
-                emoji=emoji
-            )
+            discord.SelectOption(label=name, value=str(role_id), emoji=emoji)
             for name, role_id, emoji in ROLE_OPTIONS
         ]
 
@@ -66,12 +42,11 @@ class RoleSelect(discord.ui.Select):
             min_values=1,
             max_values=1,
             options=options,
-             custom_id="role_select_menu"
+            custom_id="role_select_menu"
         )
 
     async def callback(self, interaction: discord.Interaction):
-        role_id = int(self.values[0])
-        role = interaction.guild.get_role(role_id)
+        role = interaction.guild.get_role(int(self.values[0]))
 
         if not role:
             await interaction.response.send_message(
@@ -82,14 +57,18 @@ class RoleSelect(discord.ui.Select):
 
         member = interaction.user
 
-        if role in member.roles:
-            await member.remove_roles(role)
-            msg = f"您已移除 ❮{role.mention}❯ 再次點選即可領取：("
-        else:
-            await member.add_roles(role)
-            msg = f"您已領取 ❮{role.mention}❯ 再次點選即可移除：D"
+        try:
+            if role in member.roles:
+                await member.remove_roles(role)
+                msg = f"您已移除 ❮{role.mention}❯ 再次點選即可領取：("
+            else:
+                await member.add_roles(role)
+                msg = f"您已領取 ❮{role.mention}❯ 再次點選即可移除：D"
+        except discord.Forbidden:
+            msg = "Bot 權限不足，請把 Bot 的身分組拉到遊戲身分組上面。"
 
         await interaction.response.send_message(msg, ephemeral=True)
+
 
 class RemoveAllRolesButton(discord.ui.Button):
     def __init__(self):
@@ -104,13 +83,10 @@ class RemoveAllRolesButton(discord.ui.Button):
         member = interaction.user
         guild = interaction.guild
 
-        removed_roles = []
-
-        for _, role_id, _ in ROLE_OPTIONS:
-            role = guild.get_role(role_id)
-            if role and role in member.roles:
-                removed_roles.append(role)
-                await member.remove_roles(role)
+        removed_roles = [
+            role for _, role_id, _ in ROLE_OPTIONS
+            if (role := guild.get_role(role_id)) and role in member.roles
+        ]
 
         if not removed_roles:
             await interaction.response.send_message(
@@ -118,73 +94,65 @@ class RemoveAllRolesButton(discord.ui.Button):
                 ephemeral=True
             )
             return
+
+        await member.remove_roles(*removed_roles)
         removed_mentions = " ".join(role.mention for role in removed_roles)
 
         await interaction.response.send_message(
-             f"🧹 已移除以下身分組：\n{removed_mentions}",
-             ephemeral=True
-    )
+            f"🧹 已移除以下身分組：\n{removed_mentions}",
+            ephemeral=True
+        )
 
 
 # ======================
-# View
+# View（Persistent，Bot 重開後舊選單仍可使用）
 # ======================
 class RoleSelectView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
         self.add_item(RoleSelect())
-        self.add_item(RemoveAllRolesButton()) 
+        self.add_item(RemoveAllRolesButton())
 
 
-# ======================
-# Bot ready 時送出 Embed
-# ======================
-@bot.event
-async def send_role_menu(channel: discord.TextChannel):
-    embed = discord.Embed(
-        title=" ",
-        description=" ",
-        color=0xFFFF13
-    )
+async def send_role_menu(channel: discord.abc.Messageable):
+    embed = discord.Embed(color=0xFFFF13)
 
     embed.set_author(
         name="中華蘇維埃共和國",
         icon_url="https://i.meee.com.tw/vPGC0xr.png",
     )
+    embed.set_image(url=random.choice(IMAGE_POOL))
+    embed.set_footer(text="〖點選下方選單領取遊戲身分組〗")
 
-    embed.set_image(
-    url=random.choice(IMAGE_POOL)
-    )
-
-    embed.set_footer(
-        text="〖點選下方選單領取遊戲身分組〗"
-    )
-
-    await channel.send(
-        embed=embed,
-        view=RoleSelectView()
-    )
-
+    await channel.send(embed=embed, view=RoleSelectView())
     print("身分組選單已發送")
 
-@bot.command(name="menu-role")
-@commands.has_any_role(*ALLOWED_ROLE_IDS)  # 不想給所有人亂叫就留著
-async def menu_role(ctx: commands.Context):
-    await send_role_menu(ctx.channel)
-    await ctx.message.delete()  # 可選：刪掉指令訊息，畫面比較乾淨
 
-@menu_role.error
-async def menu_role_error(ctx, error):
-    if isinstance(error, commands.MissingAnyRole):
-        await ctx.send(
-            f"{ctx.author.mention} ⚠️ 你沒有這個指令的使用權限。",
-            delete_after=3
-        )
+class MenuRole(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+    async def cog_load(self):
+        self.bot.add_view(RoleSelectView())  # ⭐ 讓舊選單復活
+
+    # 文字指令：!menu-role
+    @commands.command(name="menu-role")
+    @commands.has_any_role(*ALLOWED_ROLE_IDS)
+    async def menu_role(self, ctx: commands.Context):
+        await send_role_menu(ctx.channel)
+        try:
+            await ctx.message.delete()  # 刪掉指令訊息，畫面比較乾淨
+        except discord.Forbidden:
+            pass
+
+    # 斜線指令：/menu-role
+    @app_commands.command(name="menu-role", description="在此頻道發送遊戲身分組選單")
+    @app_commands.guild_only()
+    @app_commands.checks.has_any_role(*ALLOWED_ROLE_IDS)
+    async def menu_role_slash(self, interaction: discord.Interaction):
+        await send_role_menu(interaction.channel)
+        await interaction.response.send_message("身分組選單已發送 ✅", ephemeral=True)
 
 
-@bot.event
-async def on_ready():
-    bot.add_view(RoleSelectView())  # ⭐ 讓舊選單復活
-    print(f"{bot.user} 已上線，Persistent View 已註冊")
-    print(f"{bot.user} 已上線")
-
+async def setup(bot):
+    await bot.add_cog(MenuRole(bot))
