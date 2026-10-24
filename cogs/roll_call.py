@@ -5,6 +5,8 @@ from discord.ext import commands
 import config
 
 MAX_FIELD_LENGTH = 1024  # Embed 欄位字數上限
+MAX_CONTENT_LENGTH = 2000  # Discord 單則訊息字數上限
+PING_MENTIONS = discord.AllowedMentions(users=True, roles=False, everyone=False)
 
 
 def join_limited(items: list[str], limit: int = MAX_FIELD_LENGTH) -> str:
@@ -18,6 +20,19 @@ def join_limited(items: list[str], limit: int = MAX_FIELD_LENGTH) -> str:
             return text + suffix
         text += item + " "
     return text
+
+
+def chunk_mentions(header: str, members: list[discord.Member]) -> list[str]:
+    """把提及切成多則訊息，第一則以 header 開頭，每則不超過字數上限。"""
+    chunks, current = [], header
+    for member in members:
+        mention = member.mention + " "
+        if len(current) + len(mention) > MAX_CONTENT_LENGTH:
+            chunks.append(current)
+            current = ""
+        current += mention
+    chunks.append(current)
+    return chunks
 
 
 class RollCall(commands.Cog):
@@ -62,11 +77,33 @@ class RollCall(commands.Cog):
         else:
             embed.set_footer(text="☭ 全員到齊，革命隊伍整裝待發！ ☭")
 
-        # 先回覆（Discord 要求 3 秒內回應），再發送紀錄
+        # 先回覆（Discord 要求 3 秒內回應），再 TAG 未到成員與發送紀錄
         await interaction.response.send_message(embed=embed, ephemeral=True)
-        warning = await self.send_log(interaction, channel, role, present, absent)
-        if warning:
+        warnings = [
+            await self.ping_absent(interaction, channel, role, absent),
+            await self.send_log(interaction, channel, role, present, absent),
+        ]
+        for warning in filter(None, warnings):
             await interaction.followup.send(warning, ephemeral=True)
+
+    async def ping_absent(
+        self,
+        interaction: discord.Interaction,
+        channel: discord.VoiceChannel | discord.StageChannel,
+        role: discord.Role,
+        absent: list[discord.Member],
+    ) -> str | None:
+        """公開 TAG 未到成員，失敗時回傳要告知使用者的警告訊息。"""
+        if not absent:
+            return None
+        ping_channel = self.bot.get_channel(config.ROLL_CALL_PING_CHANNEL_ID) or interaction.channel
+        header = f"📢 **{role.name}** 點名未到 {len(absent)} 人，請立即進入 {channel.mention} 歸隊！\n"
+        try:
+            for chunk in chunk_mentions(header, absent):
+                await ping_channel.send(chunk, allowed_mentions=PING_MENTIONS)
+        except discord.HTTPException:
+            return f"⚠️ 無法在 {ping_channel.mention} TAG 未到成員，請確認機器人有發言權限。"
+        return None
 
     async def send_log(
         self,

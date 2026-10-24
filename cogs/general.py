@@ -7,7 +7,8 @@ HELP_SECTIONS = [
         "📋 點名",
         "**`/點名 語音頻道 身分組`**\n"
         "檢查該身分組成員是否都在語音頻道內，顯示已到 / 未到 / 應到人數，"
-        "並列出未到成員（不計入 Bot），同時將結果紀錄發送到點名紀錄頻道。",
+        "並列出未到成員（不計入 Bot）。\n"
+        "未到成員會被自動 TAG 通知，結果紀錄同時發送到點名紀錄頻道。",
     ),
     (
         "🎮 身分組",
@@ -44,7 +45,7 @@ class General(commands.Cog):
     async def help(self, interaction: discord.Interaction):
         embed = discord.Embed(
             title="📖 指令說明",
-            description="輸入 `/` 即可看到所有指令，選擇後依提示填入參數。\n所有指令的結果只有你自己看得到。",
+            description="輸入 `/` 即可看到所有指令，選擇後依提示填入參數。\n所有指令的結果只有你自己看得到（點名的未到 TAG 除外）。",
             color=0xCC0000,
         )
         for name, value in HELP_SECTIONS:

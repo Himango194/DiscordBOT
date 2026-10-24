@@ -9,7 +9,7 @@
 | `cogs/status.py` | 每 30 秒輪換「正在玩」狀態 |
 | `cogs/welcome.py` | 新成員加入時發送歡迎 Embed（本人可按 🗑️ 刪除） |
 | `cogs/role_menu.py` | `/menu-role` 發送遊戲身分組下拉選單（重啟後仍可使用） |
-| `cogs/roll_call.py` | `/點名 語音頻道 身分組`：檢查身分組成員是否都在語音頻道，列出未到成員，並將結果紀錄發送到 `config.py` 的 `ROLL_CALL_LOG_CHANNEL_ID` 頻道 |
+| `cogs/roll_call.py` | `/點名 語音頻道 身分組`：檢查身分組成員是否都在語音頻道，列出並自動 TAG 未到成員（`ROLL_CALL_PING_CHANNEL_ID`，預設為使用指令的頻道），並將結果紀錄發送到 `config.py` 的 `ROLL_CALL_LOG_CHANNEL_ID` 頻道 |
 | `cogs/general.py` | `/ping`、`/help` |
 
 ## 專案結構
