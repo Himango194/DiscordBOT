@@ -7,7 +7,7 @@ HELP_SECTIONS = [
         "📋 點名",
         "**`/點名 語音頻道 身分組`**\n"
         "檢查該身分組成員是否都在語音頻道內，顯示已到 / 未到 / 應到人數，"
-        "並提及未到成員（不計入 Bot），結果自動存入資料庫。",
+        "並列出未到成員（不計入 Bot），結果自動存入資料庫。",
     ),
     (
         "🗂️ 點名紀錄",
@@ -48,12 +48,10 @@ class General(commands.Cog):
         )
 
     @app_commands.command(name="help", description="列出所有指令與功能說明")
-    @app_commands.rename(public="公開")
-    @app_commands.describe(public="是否讓頻道內所有人都看得到（預設只有自己看得到）")
-    async def help(self, interaction: discord.Interaction, public: bool = False):
+    async def help(self, interaction: discord.Interaction):
         embed = discord.Embed(
             title="📖 指令說明",
-            description="輸入 `/` 即可看到所有指令，選擇後依提示填入參數。",
+            description="輸入 `/` 即可看到所有指令，選擇後依提示填入參數。\n所有指令的結果只有你自己看得到。",
             color=0xCC0000,
         )
         for name, value in HELP_SECTIONS:
@@ -61,7 +59,7 @@ class General(commands.Cog):
         if self.bot.user:
             embed.set_thumbnail(url=self.bot.user.display_avatar.url)
         embed.set_footer(text="☭ 全世界無產者，聯合起來！ ☭")
-        await interaction.response.send_message(embed=embed, ephemeral=not public)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 async def setup(bot: commands.Bot):

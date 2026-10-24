@@ -4,26 +4,11 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-MAX_CONTENT_LENGTH = 2000  # Discord 單則訊息字數上限
 MAX_FIELD_LENGTH = 1024  # Embed 欄位字數上限
 MAX_EMBED_FIELDS = 25  # Embed 欄位數量上限
 MAX_EMBED_TOTAL = 5800  # Embed 總字數上限為 6000，保留一些餘裕
 TAIPEI = timezone(timedelta(hours=8))
 DATE_FORMATS = ("%Y/%m/%d", "%Y-%m-%d", "%Y.%m.%d")
-
-
-def chunk_mentions(members: list[discord.Member]) -> list[str]:
-    """把提及字串切成多段，避免超過單則訊息上限。"""
-    chunks, current = [], ""
-    for member in members:
-        mention = member.mention + " "
-        if len(current) + len(mention) > MAX_CONTENT_LENGTH:
-            chunks.append(current)
-            current = ""
-        current += mention
-    if current:
-        chunks.append(current)
-    return chunks
 
 
 def join_limited(items: list[str], limit: int = MAX_FIELD_LENGTH) -> str:
@@ -106,18 +91,14 @@ class RollCall(commands.Cog):
         embed.add_field(name="❌ 未到", value=f"`{len(absent)} 人`", inline=True)
         embed.add_field(name="👥 應到", value=f"`{len(expected)} 人`", inline=True)
 
-        if not absent:
-            embed.set_footer(text=f"☭ 全員到齊，革命隊伍整裝待發！ ☭ · 紀錄 #{record_id}")
-            await interaction.response.send_message(embed=embed)
-            return
-
-        # Embed 內的提及不會通知，所以未到名單另外用訊息內容提及
-        embed.set_footer(text=f"未到同志請立即歸隊！ · 紀錄 #{record_id}")
-        await interaction.response.send_message(embed=embed)
-        for chunk in chunk_mentions(absent):
-            await interaction.followup.send(
-                chunk, allowed_mentions=discord.AllowedMentions(users=True, roles=False, everyone=False)
+        if absent:
+            embed.add_field(
+                name="❌ 未到名單", value=join_limited([m.mention for m in absent]), inline=False
             )
+            embed.set_footer(text=f"未到同志請立即歸隊！ · 紀錄 #{record_id}")
+        else:
+            embed.set_footer(text=f"☭ 全員到齊，革命隊伍整裝待發！ ☭ · 紀錄 #{record_id}")
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(name="點名紀錄", description="查看點名紀錄（可依日期、身分組篩選，或輸入編號查看詳細名單）")
     @app_commands.rename(date="日期", record_id="編號", role="身分組")
