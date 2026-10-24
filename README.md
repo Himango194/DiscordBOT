@@ -23,7 +23,17 @@ DiscordBOT/
 └── .env.example      # 環境變數範本
 ```
 
-## 快速開始
+## 一鍵安裝
+
+已安裝 [Git](https://git-scm.com/downloads) 與 [Python](https://www.python.org/downloads/) 後：
+
+- **Windows**：下載 [`setup.ps1`](setup.ps1)，在檔案所在資料夾開啟 PowerShell 執行
+  `powershell -ExecutionPolicy Bypass -File setup.ps1`，完成後雙擊 `start.bat` 啟動。
+- **macOS / Linux**：`bash setup.sh`
+
+腳本會下載專案、建立虛擬環境、安裝套件，並詢問 Token 建立 `.env`。
+
+## 快速開始（手動安裝）
 
 1. **建立機器人**：到 [Discord Developer Portal](https://discord.com/developers/applications) → New Application → Bot → Reset Token，複製 Token。
 2. **開啟 Intent**：在 Bot 頁面開啟 **Server Members Intent**。
