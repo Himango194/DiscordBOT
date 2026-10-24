@@ -1,0 +1,10 @@
+{
+  "name": "DiscordBOT",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "postCreateCommand": "pip install -r requirements.txt && [ -f .env ] || cp .env.example .env",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python"]
+    }
+  }
+}
