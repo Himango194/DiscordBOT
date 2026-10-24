@@ -110,6 +110,24 @@ class Database:
         async with self.conn.execute(query, params) as cursor:
             return await cursor.fetchall()
 
+    async def absent_names(self, roll_call_ids: list[int]) -> dict[int, list[str]]:
+        """回傳 {紀錄編號: [未到成員名稱, ...]}。"""
+        result: dict[int, list[str]] = {rid: [] for rid in roll_call_ids}
+        if not roll_call_ids:
+            return result
+        placeholders = ", ".join("?" * len(roll_call_ids))
+        async with self.conn.execute(
+            f"""
+            SELECT roll_call_id, display_name FROM roll_call_members
+            WHERE is_present = 0 AND roll_call_id IN ({placeholders})
+            ORDER BY display_name
+            """,
+            roll_call_ids,
+        ) as cursor:
+            async for row in cursor:
+                result[row["roll_call_id"]].append(row["display_name"])
+        return result
+
     async def get_roll_call(self, guild_id: int, roll_call_id: int):
         """回傳 (紀錄, 成員清單)，找不到時回傳 (None, [])。"""
         async with self.conn.execute(

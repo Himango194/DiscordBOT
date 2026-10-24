@@ -7,6 +7,7 @@ from discord.ext import commands
 MAX_CONTENT_LENGTH = 2000  # Discord 單則訊息字數上限
 MAX_FIELD_LENGTH = 1024  # Embed 欄位字數上限
 MAX_EMBED_FIELDS = 25  # Embed 欄位數量上限
+MAX_EMBED_TOTAL = 5800  # Embed 總字數上限為 6000，保留一些餘裕
 TAIPEI = timezone(timedelta(hours=8))
 DATE_FORMATS = ("%Y/%m/%d", "%Y-%m-%d", "%Y.%m.%d")
 
@@ -164,17 +165,31 @@ class RollCall(commands.Cog):
             await interaction.response.send_message(empty_msg, ephemeral=True)
             return
 
-        embed = discord.Embed(title=title, color=0xCC0000)
-        for r in records:
-            embed.add_field(
-                name=f"#{r['id']} · {r['role_name']} @ {r['channel_name']}",
-                value=(
-                    f"{format_time(r['called_at'])}\n"
-                    f"應到 `{r['expected']}` · 已到 `{r['present']}` · 未到 `{r['absent']}`"
-                ),
-                inline=False,
+        absent_names = await self.bot.db.absent_names([r["id"] for r in records])
+        footer = "使用 /點名紀錄 編號:<數字> 查看詳細名單"
+        fields = [
+            (
+                f"#{r['id']} · {r['role_name']} @ {r['channel_name']}",
+                f"{format_time(r['called_at'])}\n"
+                f"應到 `{r['expected']}` · 已到 `{r['present']}` · 未到 `{r['absent']}`\n"
+                "❌ 未到：",
+                absent_names[r["id"]],
             )
-        embed.set_footer(text="使用 /點名紀錄 編號:<數字> 查看詳細名單")
+            for r in records
+        ]
+
+        # 把剩餘字數平均分給每筆紀錄的未到名單，避免超過 Embed 總字數上限
+        used = len(title) + len(footer) + sum(len(name) + len(base) for name, base, _ in fields)
+        names_budget = max(20, (MAX_EMBED_TOTAL - used) // len(fields))
+
+        embed = discord.Embed(title=title, color=0xCC0000)
+        for name, base, names in fields:
+            if not names:
+                value = base.replace("❌ 未到：", "✅ 全員到齊")
+            else:
+                value = base + join_limited(names, min(names_budget, MAX_FIELD_LENGTH - len(base)))
+            embed.add_field(name=name, value=value, inline=False)
+        embed.set_footer(text=footer)
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
     async def send_record_detail(self, interaction: discord.Interaction, record_id: int):
