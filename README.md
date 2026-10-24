@@ -9,6 +9,7 @@
 | `cogs/status.py` | 每 30 秒輪換「正在玩」狀態 |
 | `cogs/welcome.py` | 新成員加入時發送歡迎 Embed（本人可按 🗑️ 刪除） |
 | `cogs/role_menu.py` | `/menu-role` 發送遊戲身分組下拉選單（重啟後仍可使用） |
+| `cogs/roll_call.py` | `/點名 語音頻道 身分組`：檢查身分組成員是否都在語音頻道，列出並提及未到成員 |
 | `cogs/general.py` | `/ping`、`/help` |
 
 ## 專案結構
