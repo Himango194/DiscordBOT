@@ -11,6 +11,7 @@ load_dotenv()
 # ======================
 TOKEN = os.getenv("DISCORD_TOKEN", "")
 GUILD_ID = int(os.getenv("GUILD_ID") or 0) or None
+DATABASE_PATH = os.getenv("DATABASE_PATH") or "data/bot.db"
 
 # ======================
 # 狀態輪換

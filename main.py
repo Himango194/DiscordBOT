@@ -7,6 +7,7 @@ from discord import app_commands
 from discord.ext import commands
 
 import config
+from database import Database
 
 log = logging.getLogger("bot")
 COGS_DIR = pathlib.Path(__file__).parent / "cogs"
@@ -17,8 +18,12 @@ class Bot(commands.Bot):
         intents = discord.Intents.default()
         intents.members = True  # 歡迎訊息、人數統計需要
         super().__init__(command_prefix=commands.when_mentioned, intents=intents)
+        self.db = Database(config.DATABASE_PATH)
 
     async def setup_hook(self):
+        await self.db.connect()
+        log.info("已連接資料庫 %s", config.DATABASE_PATH)
+
         # 自動載入 cogs/ 底下所有模組
         for file in sorted(COGS_DIR.glob("*.py")):
             if file.stem.startswith("_"):
@@ -36,6 +41,10 @@ class Bot(commands.Bot):
         log.info("已同步 %d 個斜線指令", len(synced))
 
         self.tree.on_error = self.on_app_command_error
+
+    async def close(self):
+        await self.db.close()
+        await super().close()
 
     async def on_ready(self):
         log.info("%s 已上線（ID: %s）", self.user, self.user.id)

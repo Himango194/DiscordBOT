@@ -9,7 +9,8 @@
 | `cogs/status.py` | 每 30 秒輪換「正在玩」狀態 |
 | `cogs/welcome.py` | 新成員加入時發送歡迎 Embed（本人可按 🗑️ 刪除） |
 | `cogs/role_menu.py` | `/menu-role` 發送遊戲身分組下拉選單（重啟後仍可使用） |
-| `cogs/roll_call.py` | `/點名 語音頻道 身分組`：檢查身分組成員是否都在語音頻道，列出並提及未到成員 |
+| `cogs/roll_call.py` | `/點名 語音頻道 身分組`：檢查身分組成員是否都在語音頻道，列出並提及未到成員，結果自動存入資料庫 |
+| `cogs/roll_call.py` | `/點名紀錄 [編號] [身分組]`：查看最近 10 筆點名紀錄，輸入編號可看該次已到 / 未到名單 |
 | `cogs/general.py` | `/ping`、`/help` |
 
 ## 專案結構
@@ -18,6 +19,7 @@
 DiscordBOT/
 ├── main.py           # 進入點：建立 Bot、自動載入 cogs、同步斜線指令
 ├── config.py         # 所有頻道 / 身分組 ID 等設定
+├── database.py       # SQLite 資料庫（點名紀錄），檔案預設存在 data/bot.db
 ├── cogs/             # 功能模組，新增 .py 檔會自動載入
 ├── requirements.txt
 └── .env.example      # 環境變數範本
