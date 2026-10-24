@@ -84,12 +84,27 @@ class Database:
         await self.conn.commit()
         return roll_call_id
 
-    async def recent_roll_calls(self, guild_id: int, limit: int = 10, role_id: int | None = None):
+    async def recent_roll_calls(
+        self,
+        guild_id: int,
+        limit: int = 10,
+        role_id: int | None = None,
+        since: datetime | None = None,
+        until: datetime | None = None,
+    ):
+        """查詢點名紀錄，since / until 為時間範圍 [since, until)。"""
         query = "SELECT * FROM roll_calls WHERE guild_id = ?"
         params: list = [guild_id]
         if role_id is not None:
             query += " AND role_id = ?"
             params.append(role_id)
+        # called_at 都以相同格式的 UTC ISO 字串儲存，可直接用字串比較
+        if since is not None:
+            query += " AND called_at >= ?"
+            params.append(since.astimezone(timezone.utc).isoformat())
+        if until is not None:
+            query += " AND called_at < ?"
+            params.append(until.astimezone(timezone.utc).isoformat())
         query += " ORDER BY id DESC LIMIT ?"
         params.append(limit)
         async with self.conn.execute(query, params) as cursor:

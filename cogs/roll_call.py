@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 import discord
 from discord import app_commands
@@ -6,6 +6,9 @@ from discord.ext import commands
 
 MAX_CONTENT_LENGTH = 2000  # Discord 單則訊息字數上限
 MAX_FIELD_LENGTH = 1024  # Embed 欄位字數上限
+MAX_EMBED_FIELDS = 25  # Embed 欄位數量上限
+TAIPEI = timezone(timedelta(hours=8))
+DATE_FORMATS = ("%Y/%m/%d", "%Y-%m-%d", "%Y.%m.%d")
 
 
 def chunk_mentions(members: list[discord.Member]) -> list[str]:
@@ -33,6 +36,23 @@ def join_limited(items: list[str], limit: int = MAX_FIELD_LENGTH) -> str:
             return text + suffix
         text += item + " "
     return text
+
+
+def parse_date(text: str) -> datetime | None:
+    """解析 2026/10/24、2026-10-24、10/24（今年）等格式，回傳台灣時間當天 00:00。"""
+    text = text.strip()
+    for fmt in DATE_FORMATS:
+        try:
+            return datetime.strptime(text, fmt).replace(tzinfo=TAIPEI)
+        except ValueError:
+            pass
+    for fmt in ("%m/%d", "%m-%d"):
+        try:
+            parsed = datetime.strptime(f"{datetime.now(TAIPEI).year}/{text}", "%Y/" + fmt)
+            return parsed.replace(tzinfo=TAIPEI)
+        except ValueError:
+            pass
+    return None
 
 
 def format_time(iso: str) -> str:
@@ -98,13 +118,18 @@ class RollCall(commands.Cog):
                 chunk, allowed_mentions=discord.AllowedMentions(users=True, roles=False, everyone=False)
             )
 
-    @app_commands.command(name="點名紀錄", description="查看點名紀錄（輸入編號可查看該次詳細名單）")
-    @app_commands.rename(record_id="編號", role="身分組")
-    @app_commands.describe(record_id="紀錄編號，留空則列出最近 10 筆", role="只列出此身分組的紀錄")
+    @app_commands.command(name="點名紀錄", description="查看點名紀錄（可依日期、身分組篩選，或輸入編號查看詳細名單）")
+    @app_commands.rename(date="日期", record_id="編號", role="身分組")
+    @app_commands.describe(
+        date="查詢某一天的紀錄，例如 2026/10/24 或 10/24",
+        record_id="紀錄編號，查看該次詳細名單",
+        role="只列出此身分組的紀錄",
+    )
     @app_commands.guild_only()
     async def roll_call_history(
         self,
         interaction: discord.Interaction,
+        date: str | None = None,
         record_id: int | None = None,
         role: discord.Role | None = None,
     ):
@@ -112,14 +137,34 @@ class RollCall(commands.Cog):
             await self.send_record_detail(interaction, record_id)
             return
 
-        records = await self.bot.db.recent_roll_calls(
-            interaction.guild_id, limit=10, role_id=role.id if role else None
-        )
+        if date is not None:
+            day = parse_date(date)
+            if day is None:
+                await interaction.response.send_message(
+                    f"看不懂日期「{date}」，請使用 2026/10/24 或 10/24 這種格式。", ephemeral=True
+                )
+                return
+            records = await self.bot.db.recent_roll_calls(
+                interaction.guild_id,
+                limit=MAX_EMBED_FIELDS,
+                role_id=role.id if role else None,
+                since=day,
+                until=day + timedelta(days=1),
+            )
+            title = f"🗂️ {day:%Y/%m/%d} 的點名紀錄"
+            empty_msg = f"{day:%Y/%m/%d} 沒有任何點名紀錄。"
+        else:
+            records = await self.bot.db.recent_roll_calls(
+                interaction.guild_id, limit=10, role_id=role.id if role else None
+            )
+            title = "🗂️ 最近的點名紀錄"
+            empty_msg = "目前沒有任何點名紀錄。"
+
         if not records:
-            await interaction.response.send_message("目前沒有任何點名紀錄。", ephemeral=True)
+            await interaction.response.send_message(empty_msg, ephemeral=True)
             return
 
-        embed = discord.Embed(title="🗂️ 最近的點名紀錄", color=0xCC0000)
+        embed = discord.Embed(title=title, color=0xCC0000)
         for r in records:
             embed.add_field(
                 name=f"#{r['id']} · {r['role_name']} @ {r['channel_name']}",
