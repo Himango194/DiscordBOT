@@ -11,7 +11,6 @@ load_dotenv()
 # ======================
 TOKEN = os.getenv("DISCORD_TOKEN", "")
 GUILD_ID = int(os.getenv("GUILD_ID") or 0) or None
-DATABASE_PATH = os.getenv("DATABASE_PATH") or "data/bot.db"
 
 # ======================
 # 狀態輪換
@@ -29,6 +28,11 @@ STATUS_INTERVAL_SECONDS = 30
 # ======================
 WELCOME_CHANNEL_ID = 1352133950998450388
 ROLE_CHANNEL_ID = 1451266846593515610  # 歡迎訊息中提示去領身分組的頻道
+
+# ======================
+# 點名
+# ======================
+ROLL_CALL_LOG_CHANNEL_ID = 0  # 點名結果紀錄要發送到的文字頻道（0 = 不發送）
 
 # ======================
 # 身分組選單（名稱, 身分組 ID, emoji）
