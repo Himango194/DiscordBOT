@@ -98,9 +98,6 @@ class RollCall(commands.Cog):
         embed.add_field(
             name="❌ 未到名單", value=join_limited([m.mention for m in absent]), inline=False
         )
-        embed.add_field(
-            name="✅ 已到名單", value=join_limited([m.mention for m in present]), inline=False
-        )
 
         try:
             # Embed 內的提及不會通知任何人，只會顯示名字
